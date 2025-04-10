@@ -9,8 +9,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-/*********************************************************************/ 
-
 type apiFunc func(http.ResponseWriter, *http.Request) error
 
 type ApiError struct {
@@ -18,10 +16,9 @@ type ApiError struct {
 }
 
 type APIServer struct {
-	listenAddr string
+	listenAddr	string
+	store		Storage 
 }
-
-/***********************************************************************************/
 
 func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
 	id := mux.Vars(r)["id"]
@@ -31,7 +28,19 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	return nil
+	req := new(CreateAccountRequest)
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		return err 
+	}
+	
+	account := NewAccount(req.FirstName, req.LastName)
+
+	if err := s.store.CreateAccount(account); err != nil {
+		return err 
+	}
+
+	return WriteJSON(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
@@ -56,9 +65,10 @@ func makeHTTPHandleFunc(f apiFunc) http.HandlerFunc {
 	}
 }
 
-func NewAPIServer(listenAddr string) *APIServer {
+func NewAPIServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
+		store:		store,
 	}
 }
 
@@ -85,7 +95,6 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 }
 
 
-/**********************************************************************/ 
 
 
 
